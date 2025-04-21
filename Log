@@ -1,0 +1,66 @@
+import os
+from datetime import datetime
+import tkinter as tk
+from PIL import Image, ImageTk
+
+def show_warning_image(image_path):
+    window = tk.Tk()
+    window.title("Warning")
+
+    img = Image.open(image_path)
+    img = ImageTk.PhotoImage(img)
+
+    label = tk.Label(window, image=img)
+    label.pack()
+
+    def toggle_visibility():
+        if label.winfo_viewable():
+            label.pack_forget()
+        else:
+            label.pack()
+        window.after(500, toggle_visibility)
+    toggle_visibility()
+    label.bind("<Button-1>", lambda e: window.destroy())
+    window.mainloop()
+
+def extract_and_calculate_difference(folder_path, keyword):
+    latest_value = None
+    second_latest_value = None
+    latest_datetime = None
+    second_latest_datetime = None
+
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.log') or filename.endswith('.trc'):
+            file_path = os.path.join(folder_path, filename)
+            with open(file_path, 'r') as file:
+                for line in file:
+                    if keyword in line:
+                        components = line.strip().split(',')
+                        date_str = components[0]
+                        time_str = components[1]
+                        value = float(components[3])
+                        datetime_str = f"{date_str} {time_str}"
+                        current_datetime = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S.%f')
+
+                        if latest_datetime is None or current_datetime > latest_datetime:
+                            second_latest_value = latest_value
+                            second_latest_datetime = latest_datetime
+                            latest_value = value
+                            latest_datetime = current_datetime
+
+    if latest_value is not None and second_latest_value is not None:
+        difference = latest_value - second_latest_value
+        rounded_difference = round(difference, 2)
+        print(f"Latest Value: {latest_value}, Second Latest Value: {second_latest_value}")
+        print(f"Difference: {rounded_difference}")
+
+        if rounded_difference > 5 or rounded_difference < -5:
+            show_warning_image('image.png')
+    else:
+        print("Not enough data to calculate the difference.")
+
+folder_path = r'C:\FmXP\log'
+keyword = 'Final Z Offset'
+
+extract_and_calculate_difference(folder_path, keyword)
+
